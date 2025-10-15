@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Az aradi vértanúk – Interaktív lapbook</title>
+  <style id="alad-css">
+    .alad-root{--bg:#fff;--muted:#6b7280;--ink:#0f172a;--border:#e5e7eb;--pill:#f3f4f6;--accent:#0ea5e9}
+    .alad-root{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Helvetica,Arial,sans-serif;color:var(--ink);background:linear-gradient(#f8fafc,#fff);padding:16px;border-radius:20px;border:1px solid var(--border);box-shadow:0 1px 3px rgba(0,0,0,.05);max-width:1100px;margin:24px auto}
+    .alad-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .alad-space{height:8px}
+    .alad-title{font-size:clamp(20px,2.6vw,28px);font-weight:800;margin:0}
+    .alad-sub{color:var(--muted);font-size:12px}
+    .alad-badge{background:#eef2ff;border:1px solid #e0e7ff;color:#3730a3;border-radius:999px;padding:4px 10px;font-size:12px;display:inline-flex;align-items:center;gap:6px}
+    .alad-btn{border:1px solid var(--border);background:#fff;border-radius:999px;padding:8px 12px;font-weight:600;cursor:pointer}
+    .alad-btn:active{transform:translateY(1px)}
+    .alad-input{flex:1;border:1px solid var(--border);padding:8px 10px;border-radius:12px;font-size:14px}
+    .alad-card{border:1px solid var(--border);border-radius:16px;padding:14px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-top:12px}
+    .alad-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+    .alad-img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:12px;border:1px solid var(--border)}
+    .alad-acc-h{cursor:pointer;display:flex;justify-content:space-between;align-items:center;padding:8px 0;font-weight:600}
+    .alad-acc-c{display:none;font-size:14px;line-height:1.45;color:#111}
+    .alad-acc.open .alad-acc-c{display:block}
+    .alad-small{font-size:12px;color:var(--muted)}
+    .alad-list{padding-left:18px}
+    .alad-quizq{border:1px solid var(--border);border-radius:14px;padding:10px}
+    .alad-footer{font-size:11px;color:var(--muted);margin-top:8px}
+    .alad-map{position:relative;border:1px solid var(--border);border-radius:16px;overflow:hidden}
+    .alad-map img{display:block;width:100%;height:auto}
+    .alad-marker{position:absolute;width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px #fff;transform:translate(-50%,-50%)}
+    .alad-marker::after{content:attr(data-label);position:absolute;top:-12px;left:50%;transform:translateX(-50%);font-size:10px;white-space:nowrap;color:#111;text-shadow:0 1px 0 #fff}
+    .alad-row-right{margin-left:auto;display:flex;gap:8px}
+  </style>
+</head>
+<body>
+  <div id="arad-lapbook"></div>
+
+  <script>
+  (function () {
+    function h(tag, attrs = {}, ...children) {
+      const el = document.createElement(tag);
+      for (const [k, v] of Object.entries(attrs || {})) {
+        if (k === 'class') el.className = v;
+        else if (k === 'style') Object.assign(el.style, v);
+        else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2), v);
+        else if (v !== undefined && v !== null) el.setAttribute(k, v);
+      }
+      for (const ch of children.flat()) {
+        if (ch == null) continue;
+        el.appendChild(typeof ch === 'string' ? document.createTextNode(ch) : ch);
+      }
+      return el;
+    }
+
+    const DATA = (function(){
+      const t = (hu,en) => ({hu,en});
+      const M = [
+        {id:'aulich',name:t('Aulich Lajos','Lajos Aulich'),rank:t('altábornagy, hadügyminiszter','Lieutenant General, Minister of War'),birthplace:t('Pozsony (Bratislava)','Pressburg (Bratislava)'),
+         img:'https://upload.wikimedia.org/wikipedia/commons/2/2d/Aulich_Lajos.jpg',
+         short:t('Császári tisztből lett honvéd vezető; 1849 nyarán hadügyminiszter.','Imperial officer turned Honvéd leader; Minister of War in summer 1849.'),
+         details:t('Szervezőkészsége és fegyelme a minisztériumi munkában is megmutatkozott.','Organizational skill and discipline suited to the ministry.'),
+         quote:t('A haza és becsület szolgálata az első.','Service to homeland and honor comes first.'),
+         p:[53.5,41.5]},
+        {id:'damjanich',name:t('Damjanich János','János Damjanich'),rank:t('vezérőrnagy','Major General'),birthplace:t('Staza (Horvátország)','Staza (Croatia)'),
+         img:'https://upload.wikimedia.org/wikipedia/commons/2/28/J%C3%A1nos_Damjanich_by_Mik%C3%B3falvi_S%C3%A1ndor.jpg',
+         short:t('Karizmatikus, a tavaszi hadjárat egyik hőse.','Charismatic hero of the Spring Campaign.'),
+         details:t('Gyors manőverekre és fegyelemre épített.','Built on speed and discipline.'),
+         quote:t('Legyünk méltók a szabadsághoz!','Let us be worthy of freedom!'), p:[52.2,54.4]},
+        {id:'dessewffy',name:t('Dessewffy Arisztid','Arisztid Dessewffy'),rank:t('vezérőrnagy','Major General'),birthplace:t('Csákány (Zemplén)','Csákány (Zemplén County)'),
+         img:'https://upload.wikimedia.org/wikipedia/commons/5/51/Dessewffy_Arisztid.jpg', short:t('Bátor lovassági parancsnok.','Brave cavalry commander.'), details:t('Sikeres felderítéseket és rohamokat vezetett.','Led successful recon and charges.'), p:[63,43]},
+        {id:'knezich',name:t('Knézich Károly','Károly Knezich'),rank:t('ezredes','Colonel'),birthplace:t('Virovitica (Horvátország)','Virovitica (Croatia)'),
+         img:'https://upload.wikimedia.org/wikipedia/commons/8/8f/Knezich_Karoly.jpg', short:t('Fegyelmezett tiszt.','Disciplined officer.'), details:t('Összetartó egységeket vezetett.','Commanded cohesive units.'), p:[49.5,51.8]},
+        {id:'kiss',name:t('Kiss Ernő','Ernő Kiss'),rank:t('altábornagy','Lieutenant General'),birthplace:t('Temesvár','Timișoara'),
+         img:'https://upload.wikimedia.org/wikipedia/commons/d/d0/Kiss_Ern%C5%91.jpg', short:t('Bánsági származású tábornok.','General from the Banat.'), details:t('Védelmi műveletek és visszavonulások szervezése.','Defensive ops and withdrawals.'), p:[60.5,53.2]},
+        {id:'lahner',name:t('Lahner György','György Lahner'),rank:t('tábornok, fegyverzeti vezető','General, ordnance chief'),birthplace:t('Schüttenhofen (Sušice)','Schüttenhofen (Sušice)'),
+         img:'https://upload.wikimedia.org/wikipedia/commons/4/4c/Lahner_Gy%C3%B6rgy.jpg', short:t('Fegyverellátás megszervezője.','Organized ordnance and supply.'), details:t('Fegyvergyártás és logisztika.','Arms production and logistics.'), p:[45,33]},
+        {id:'lazar',name:t('Lázár Vilmos','Vilmos Lázár'),rank:t('ezredes','Colonel'),birthplace:t('Nagyszalonta','Salonta'),
+         img:'https://upload.wikimedia.org/wikipedia/commons/8/83/L%C3%A1z%C3%A1r_Vilmos.jpg', short:t('Lovassági tiszt.','Cavalry officer.'), details:t('Gyors mozgékonyságot követelt.','Emphasized mobility.'), p:[57.8,49.6]},
+        {id:'leininger',name:t('Leiningen–Westerburg Károly','Károly Leiningen-Westerburg'),rank:t('vezérőrnagy','Major General'),birthplace:t('Ilbenstadt (Németország)','Ilbenstadt (Germany)'),
+         img:'https://upload.wikimedia.org/wikipedia/commons/1/12/Leiningen-Westerburg_K%C3%A1roly.jpg', short:t('A magyar ügy hű támogatója.','Loyal to Hungarian cause.'), details:t('Több nyelven beszélt.','Multilingual.'), p:[35.2,26.8]},
+        {id:'nagysandor',name:t('Nagysándor József','József Nagysándor'),rank:t('vezérőrnagy','Major General'),birthplace:t('Nagyszeben környéke','Near Sibiu'),
+         img:'https://upload.wikimedia.org/wikipedia/commons/6/67/Nagys%C3%A1ndor_J%C3%B3zsef.jpg', short:t('Fontos lovassági parancsnok.','Key cavalry commander.'), details:t('Gyors lovas manőverek.','Rapid cavalry maneuvers.'), p:[64,49]},
+        {id:'poeltenberg',name:t('Poeltenberg Ernő','Ernő Poeltenberg'),rank:t('vezérőrnagy','Major General'),birthplace:t('Bécs','Vienna'),
+         img:'https://upload.wikimedia.org/wikipedia/commons/f/f7/Poeltenberg_Ern%C5%91.jpg', short:t('Osztrák születésű tábornok.','Austrian-born general.'), details:t('Átállása jelképes.','His switch is symbolic.'), p:[46.6,38.5]},
+        {id:'schweidel',name:t('Schweidel József','József Schweidel'),rank:t('vezérőrnagy','Major General'),birthplace:t('Zombor','Sombor'),
+         img:'https://upload.wikimedia.org/wikipedia/commons/8/8e/Schweidel_J%C3%B3zsef.jpg', short:t('Városparancsnok, rendpárti.','City commander, orderly.'), details:t('Szigorú, de igazságos.','Strict but fair.'), p:[54.3,45.6]},
+        {id:'torok',name:t('Török Ignác','Ignác Török'),rank:t('vezérőrnagy, erődítési szakértő','Major General, fortification expert'),birthplace:t('Gödöllő','Gödöllő'),
+         img:'https://upload.wikimedia.org/wikipedia/commons/0/0d/T%C3%B6r%C3%B6k_Ign%C3%A1c.jpg', short:t('Erődítések szervezője.','Organizer of fortifications.'), details:t('Mérnöki tudását védvonalakra állította.','Applied engineering to defenses.'), p:[55.8,43.6]},
+        {id:'vecsey',name:t('Vécsey Károly','Károly Vécsey'),rank:t('gróf, vezérőrnagy','Count, Major General'),birthplace:t('Pest (Budapest)','Pest (Budapest)'),
+         img:'https://upload.wikimedia.org/wikipedia/commons/7/7e/V%C3%A9csey_K%C3%A1roly.jpg', short:t('Utolsóként végezték ki.','Executed last among the martyrs.'), details:t('Higgadt, módszeres döntéseiről ismert.','Calm, methodical commander.'), p:[56.2,43.8]},
+      ];
+
+      const QUIZ = [
+        {id:'q1', prompt:t('Ki volt hadügyminiszter 1849 nyarán?','Who served as Minister of War in summer 1849?'), options:['Damjanich János','Aulich Lajos','Vécsey Károly','Nagysándor József'], answer:1},
+        {id:'q2', prompt:t('Melyik vértanú született Bécsben?','Which martyr was born in Vienna?'), options:['Poeltenberg Ernő','Leiningen–Westerburg Károly','Schweidel József','Kiss Ernő'], answer:0},
+        {id:'q3', prompt:t('Ki volt erődítési szakértő?','Who was the fortification expert?'), options:['Török Ignác','Lahner György','Dessewffy Arisztid','Knézich Károly'], answer:0},
+        {id:'q4', prompt:t('Ki volt német származású és hű a magyar ügyhöz?','Who was German-born and loyal to the Hungarian cause?'), options:['Leiningen–Westerburg Károly','Damjanich János','Aulich Lajos','Lázár Vilmos'], answer:0},
+        {id:'q5', prompt:t('Ki szenvedett utolsóként vértanúhalált Aradon?','Who was executed last among the martyrs at Arad?'), options:['Kiss Ernő','Vécsey Károly','Nagysándor József','Schweidel József'], answer:1},
+      ];
+
+      const TIMELINE = [
+        ['1848. március 15.','Revolution in Pest','Forradalom Pesten','Revolution in Pest'],
+        ['1849. április 14.','Declaration of Independence','Függetlenségi nyilatkozat','Declaration of Independence'],
+        ['1849. augusztus 13.','Surrender at Világos','A világosi fegyverletétel','Surrender at Világos'],
+        ['1849. október 6.','Executions at Arad; Batthyány in Pest','Az aradi vértanúk kivégzése; Batthyány Pesten','Executions at Arad; Batthyány in Pest'],
+      ];
+      return { M, QUIZ, TIMELINE };
+    })();
+
+    function createUI(state) {
+      const { lang, query, showImages } = state;
+      const t = (hu,en) => (lang==='hu'?hu:en);
+
+      const header = h('div', {class:'alad-row'},
+        h('div', {},
+          h('h1', {class:'alad-title'}, t('Az aradi vértanúk – Interaktív lapbook','The 13 Martyrs of Arad – Interactive Lapbook')),
+          h('div', {class:'alad-sub'}, t('Kétnyelvű tanulói segédanyag a 1848–49-es szabadságharcról.','Bilingual learning aid about the 1848–49 War of Independence.'))
+        ),
+        h('div', {class:'alad-row-right'},
+          h('span', {class:'alad-badge'}, '1849.10.06'),
+          h('button', {class:'alad-btn', onclick: () => state.setLang(lang==='hu'?'en':'hu')}, t('Magyar / Angol','Hungarian / English')),
+          h('button', {class:'alad-btn', onclick: () => exportHTML(state)}, t('HTML export','Export HTML'))
+        ),
+      );
+
+      const searchBar = h('div', {class:'alad-row alad-card'},
+        h('input', {class:'alad-input', placeholder:t('Keresés név, rang vagy hely szerint…','Search by name, rank, or place…'), value:query, oninput:(e)=>state.setQuery(e.target.value)}),
+        h('button', {class:'alad-btn', onclick: ()=>state.setShowImages(!showImages)}, showImages? t('Képek elrejtése','Hide photos'):t('Képek megjelenítése','Show photos'))
+      );
+
+      const intro = h('div', {class:'alad-card'},
+        h('h2', {}, t('Bevezetés','Introduction')),
+        h('p', {}, t(
+          'Az 1848–49-es magyar szabadságharc leverése után 1849. október 6-án Aradon tizenhárom honvéd tábornokot és ezredest végeztek ki. Emlékük a hazaszeretet és bajtársi szolidaritás jelképe.',
+          'After the defeat of the Hungarian War of Independence, thirteen Honvéd generals and colonels were executed on October 6, 1849 in Arad. Their memory symbolizes patriotism and comradeship.'
+        )),
+        h('div', {class:'alad-small'}, t('Idézetek az életrajzi lapokon.','See quotes on profiles.'))
+      );
+
+      const timelineItems = DATA.TIMELINE.map(([d,enHU,huHU,enEN])=>h('li',{}, h('strong',{}, d+': '), t(huHU,enEN)));
+      const timeline = h('div', {class:'alad-card'}, h('h2',{}, t('Idővonal','Timeline')), h('ul',{class:'alad-list'}, timelineItems));
+
+      const topGrid = h('div', {class:'alad-grid'}, intro, timeline);
+
+      const list = DATA.M.filter(m=>{
+        const blob = [m.name.hu,m.name.en,m.rank.hu,m.rank.en,m.birthplace.hu,m.birthplace.en].join(' ').toLowerCase();
+        return !query || blob.includes(query.toLowerCase());
+      }).map(m=> profileCard(m, state));
+      const profiles = h('div', {class:'alad-card'}, h('h2',{}, t('A 13 vértanú – életrajzi lapok','The 13 Martyrs – Profile Cards')), h('div',{class:'alad-grid'}, list));
+
+      const map = h('div', {class:'alad-card'}, h('h2',{}, t('Születési helyek térképe','Map of Birthplaces')),
+        mapWidget(DATA.M, state)
+      );
+
+      const quizCards = DATA.QUIZ.map(q=> quizCard(q, state));
+      const quiz = h('div', {class:'alad-card'}, h('h2',{}, t('Mini kvíz','Mini Quiz')), h('div',{class:'alad-grid'}, quizCards),
+        h('div',{class:'alad-row'}, h('div',{}, t('Pontszám:','Score:')+' '+score(state)+'/'+DATA.QUIZ.length), h('button',{class:'alad-btn', onclick:()=>state.resetQuiz()}, t('Újrakezd','Reset')))
+      );
+
+      const notes = h('div', {class:'alad-card'}, h('h2',{}, t('Használati megjegyzések','Usage notes')),
+        h('ul',{class:'alad-list alad-small'},
+          h('li',{}, t('Képek: nyilvános portrék forrásmegjelöléssel.','Photos: public portraits with attribution.')),
+          h('li',{}, t('Az exportált HTML egy statikus pillanatkép.','Exported HTML is a static snapshot.')),
+          h('li',{}, t('A térkép közelítő jelöléseket használ.','Map markers are approximate.'))
+        )
+      );
+
+      return h('div', {class:'alad-root', id: state.rootId}, header, h('div',{class:'alad-space'}), searchBar, h('div',{class:'alad-space'}), topGrid, profiles, map, quiz, notes, h('div',{class:'alad-footer'}, t('Készült oktatási célra.','Created for educational use.')));
+    }
+
+    function profileCard(m, state){
+      const { lang, showImages } = state; const t = (hu,en)=> (lang==='hu'?hu:en);
+      const acc1 = h('div',{class:'alad-acc'}, h('div',{class:'alad-acc-h', onclick:(e)=>acc1.classList.toggle('open')}, t('Rövid életrajz','Short biography')), h('div',{class:'alad-acc-c'}, t(m.short.hu,m.short.en)));
+      const acc2 = h('div',{class:'alad-acc'}, h('div',{class:'alad-acc-h', onclick:(e)=>acc2.classList.toggle('open')}, t('Részletek / pályakép','Details / career')), h('div',{class:'alad-acc-c'}, t(m.details.hu,m.details.en)));
+      const acc3 = m.quote ? h('div',{class:'alad-acc'}, h('div',{class:'alad-acc-h', onclick:(e)=>acc3.classList.toggle('open')}, t('Idézet','Quote')), h('div',{class:'alad-acc-c', style:{fontStyle:'italic'}}, t(m.quote.hu,m.quote.en))) : null;
+
+      return h('div', {class:'alad-card'},
+        showImages && m.img ? h('img', {class:'alad-img', src:m.img, alt:t(m.name.hu,m.name.en)}) : null,
+        h('div', {class:'alad-row'}, h('h3', {style:{margin:0,fontSize:'18px',fontWeight:'700'}}, t(m.name.hu,m.name.en)), h('span',{class:'alad-badge'}, 'Honvéd')),
+        h('div',{class:'alad-small'}, h('strong',{}, t('Rang: ','Rank: ')), t(m.rank.hu,m.rank.en)),
+        h('div',{class:'alad-small'}, h('strong',{}, t('Születési hely: ','Birthplace: ')), t(m.birthplace.hu,m.birthplace.en)),
+        acc1, acc2, acc3
+      );
+    }
+
+    function mapWidget(list, state){
+      const { lang } = state; const t = (hu,en)=> (lang==='hu'?hu:en);
+      const mapURL = 'https://upload.wikimedia.org/wikipedia/commons/8/80/Blank_map_of_Europe.svg';
+      const wrap = h('div',{class:'alad-map'});
+      const img = h('img',{src:mapURL, alt:t('Európa térképe','Map of Europe')});
+      wrap.appendChild(img);
+      img.addEventListener('load', ()=>{
+        list.filter(m=>m.p).forEach(m=>{
+          const mk = h('div',{class:'alad-marker', 'data-label': (lang==='hu'? m.name.hu.split(' ')[0]: m.name.en.split(' ')[0])});
+          mk.style.left = m.p[0]+'%';
+          mk.style.top = m.p[1]+'%';
+          wrap.appendChild(mk);
+        });
+      });
+      return wrap;
+    }
+
+    function quizCard(q, state){
+      const { lang } = state; const t=(hu,en)=> (lang==='hu'?hu:en);
+      const box = h('div',{class:'alad-quizq'}, h('p',{style:{fontWeight:'600'}}, t(q.prompt.hu,q.prompt.en)));
+      q.options.forEach((opt, idx)=>{
+        const id = q.id+"_"+idx;
+        const lbl = h('label', {for:id, class:'alad-row', style:{gap:'6px'}},
+          h('input',{type:'radio', name:q.id, id, onchange:()=>state.setAnswer(q.id, idx)}),
+          h('span',{}, opt)
+        );
+        box.appendChild(lbl);
+      });
+      return box;
+    }
+
+    function score(state){
+      let s=0; for(const q of state.answers.keys()) { if (state.answers.get(q)===state.key[q]) s++; } return s;
+    }
+
+    function exportHTML(state){
+      const root = document.getElementById(state.rootId);
+      if(!root) return;
+      const css = document.getElementById('alad-css').textContent;
+      const html = `<!doctype html><html lang="${state.lang}"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Aradi vértanúk – Lapbook</title><style>${css}</style></head><body>${root.outerHTML}</body></html>`;
+      const blob = new Blob([html], {type:'text/html'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='aradi-lapbook-'+state.lang+'.html'; a.click(); URL.revokeObjectURL(url);
+    }
+
+    function initState(mountSel){
+      const answers = new Map();
+      const key = {}; DATA.QUIZ.forEach(q=>{answers.set(q.id,null); key[q.id]=q.answer;});
+      const state = {
+        rootId: 'alad-'+Math.random().toString(36).slice(2,8),
+        lang:'hu', query:'', showImages:true,
+        answers, key,
+        setLang(v){ this.lang=v; rerender(); },
+        setQuery(v){ this.query=v; rerender(); },
+        setShowImages(v){ this.showImages=v; rerender(); },
+        setAnswer(id, idx){ this.answers.set(id, idx); rerender(); },
+        resetQuiz(){ this.answers.forEach((_,k)=>this.answers.set(k,null)); rerender(); }
+      };
+
+      const mount = document.querySelector(mountSel);
+      if(!mount) throw new Error('Mount element not found: '+mountSel);
+
+      function rerender(){
+        mount.innerHTML='';
+        mount.appendChild(createUI(state));
+      }
+
+      rerender();
+      return state;
+    }
+
+    // Auto-mount on #arad-lapbook
+    initState('#arad-lapbook');
+  })();
+  </script>
+</body>
+</html>
